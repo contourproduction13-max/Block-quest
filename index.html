@@ -18,4 +18,97 @@ document.querySelectorAll(".mode").forEach(b=>b.onclick=()=>setMode(b.dataset.mo
   });
 }
 </script>
+
+<script>
+(() => {
+  let audio, timer, playing = false, step = 0;
+
+  const notes = [
+    261.63, 329.63, 392.00, 523.25,
+    392.00, 329.63, 293.66, 349.23,
+    440.00, 587.33, 440.00, 392.00,
+    329.63, 392.00, 349.23, 293.66
+  ];
+
+  const button = document.createElement("button");
+  button.textContent = "♫ Music: OFF";
+  button.setAttribute("aria-label", "Toggle arcade music");
+  button.style.cssText =
+    "position:fixed;right:12px;bottom:14px;z-index:9999;" +
+    "padding:12px 16px;border:1px solid #55d6ff;border-radius:24px;" +
+    "background:#151a35;color:#fff;font-weight:bold;" +
+    "box-shadow:0 0 14px #287dff;";
+
+  document.body.appendChild(button);
+
+  function playNote(freq, start, duration, volume) {
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, start);
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.025);
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001, start + duration
+    );
+
+    osc.connect(gain);
+    gain.connect(audio.destination);
+    osc.start(start);
+    osc.stop(start + duration + 0.03);
+  }
+
+  function tick() {
+    if (!playing || !audio) return;
+
+    const now = audio.currentTime;
+    const freq = notes[step % notes.length];
+
+    playNote(freq, now, 0.19, 0.045);
+
+    if (step % 4 === 0) {
+      playNote(freq / 2, now, 0.28, 0.025);
+    }
+
+    step++;
+  }
+
+  button.addEventListener("click", async () => {
+    try {
+      if (playing) {
+        playing = false;
+        clearInterval(timer);
+        timer = null;
+        button.textContent = "♫ Music: OFF";
+        return;
+      }
+
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        button.textContent = "Music unavailable";
+        return;
+      }
+
+      audio = audio || new AudioContextClass();
+      await audio.resume();
+
+      playing = true;
+      button.textContent = "♫ Music: ON";
+      tick();
+      timer = setInterval(tick, 230);
+    } catch (error) {
+      playing = false;
+      clearInterval(timer);
+      timer = null;
+      button.textContent = "♫ Tap to retry";
+    }
+  });
+})();
+</script>
+</body></html>
+
 </body></html>
